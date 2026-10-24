@@ -1,0 +1,47 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # -----------------------------------------------------------
+  # 1. TaskFlow Auth Service Scrape Job
+  # -----------------------------------------------------------
+  - job_name: 'auth-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['auth-service:8081', 'host.docker.internal:8081']
+        labels:
+          application: 'auth-service'
+          environment: 'local'
+
+  # -----------------------------------------------------------
+  # 2. TaskFlow Task Service Scrape Job
+  # -----------------------------------------------------------
+  - job_name: 'task-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['task-service:8082', 'host.docker.internal:8082']
+        labels:
+          application: 'task-service'
+          environment: 'local'
+
+  # -----------------------------------------------------------
+  # 3. TaskFlow Stats Service Scrape Job
+  # -----------------------------------------------------------
+  - job_name: 'stats-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['stats-service:8083', 'host.docker.internal:8083']
+        labels:
+          application: 'stats-service'
+          environment: 'local'
+
+  # -----------------------------------------------------------
+  # 4. Prometheus Self-Monitoring
+  # -----------------------------------------------------------
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

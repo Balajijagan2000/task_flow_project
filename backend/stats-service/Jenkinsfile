@@ -1,0 +1,81 @@
+pipeline {
+    agent any
+
+    environment {
+        SERVICE_NAME = "stats-service"
+        IMAGE_NAME = "taskflow-stats-service"
+        IMAGE_TAG = "v${env.BUILD_NUMBER}"
+        NAMESPACE = "taskflow"
+        JAVA_HOME = tool name: 'Java-21', type: 'jdk'
+    }
+
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Compile & Test Service') {
+            steps {
+                echo "=== Compiling and Testing ${SERVICE_NAME} only ==="
+                dir('backend') {
+                    sh 'mvn clean verify -pl stats-service -am -Djava.version=21'
+                }
+            }
+            post {
+                always {
+                    junit testResults: 'backend/stats-service/target/surefire-reports/*.xml', allowEmptyResults: false
+                }
+            }
+        }
+
+        stage('Build Container Image') {
+            steps {
+                echo "=== Building Docker Image for ${SERVICE_NAME} ==="
+                sh """
+                    docker build -t ${IMAGE_NAME}:${IMAGE_TAG} -t ${IMAGE_NAME}:latest -f backend/stats-service/Dockerfile backend
+                """
+            }
+        }
+
+        stage('Load Image to Cluster') {
+            steps {
+                echo "=== Loading ${IMAGE_NAME}:${IMAGE_TAG} into local cluster ==="
+                sh "kind load docker-image ${IMAGE_NAME}:${IMAGE_TAG} --name taskflow || true"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                echo "=== Deploying ${SERVICE_NAME} into namespace ${NAMESPACE} ==="
+                sh """
+                    kubectl apply -f deploy/kubernetes/stats-service/ -n ${NAMESPACE}
+                    kubectl set image deployment/stats-service stats-service=${IMAGE_NAME}:${IMAGE_TAG} -n ${NAMESPACE}
+                """
+            }
+        }
+
+        stage('Verify Rollout Status') {
+            steps {
+                echo "=== Verifying Zero-Downtime Rolling Update for ${SERVICE_NAME} ==="
+                sh """
+                    kubectl rollout status deployment/stats-service -n ${NAMESPACE} --timeout=120s
+                    kubectl get pods -n ${NAMESPACE} -l app=stats-service
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "SUCCESS: ${SERVICE_NAME} (${IMAGE_TAG}) deployed successfully without impacting other services!"
+        }
+        failure {
+            echo "FAILURE: ${SERVICE_NAME} pipeline failed. Check test reports and container logs."
+        }
+        always {
+            cleanWs deleteDirs: true, notFailBuild: true
+        }
+    }
+}

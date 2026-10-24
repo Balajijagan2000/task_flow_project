@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: stats-service
+  profiles:
+    active: localdev
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+task-service:
+  base-url: ${TASK_SERVICE_URL:http://localhost:8082}

@@ -1,0 +1,9 @@
+task-service:
+  base-url: ${TASK_SERVICE_URL:http://task-service:8082}
+
+jwt:
+  secret: ${JWT_SECRET:localserver-secret-key-taskflow-environment-32-chars!}
+
+logging:
+  level:
+    com.taskflow.stats: INFO

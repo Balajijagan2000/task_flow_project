@@ -1,0 +1,124 @@
+services:
+  # ----------------------------------------------------
+  # 1. PostgreSQL Database Service
+  # ----------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: taskflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - taskflow-network
+
+  # ----------------------------------------------------
+  # 2. Authentication Service
+  # ----------------------------------------------------
+  auth-service:
+    build:
+      context: ../../backend
+      dockerfile: auth-service/Dockerfile
+    container_name: taskflow-auth-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-localserver}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: auth_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-taskflow-super-secret-key-for-local-compose-32chars!}
+    ports:
+      - "${AUTH_SERVICE_PORT:-8081}:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - taskflow-network
+
+  # ----------------------------------------------------
+  # 3. Task Management Service
+  # ----------------------------------------------------
+  task-service:
+    build:
+      context: ../../backend
+      dockerfile: task-service/Dockerfile
+    container_name: taskflow-task-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-localserver}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: task_db
+      DB_USERNAME: ${POSTGRES_USER:-postgres}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      JWT_SECRET: ${JWT_SECRET:-taskflow-super-secret-key-for-local-compose-32chars!}
+    ports:
+      - "${TASK_SERVICE_PORT:-8082}:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - taskflow-network
+
+  # ----------------------------------------------------
+  # 4. Statistics Service
+  # ----------------------------------------------------
+  stats-service:
+    build:
+      context: ../../backend
+      dockerfile: stats-service/Dockerfile
+    container_name: taskflow-stats-service
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-localserver}
+      TASK_SERVICE_URL: http://task-service:8082
+      JWT_SECRET: ${JWT_SECRET:-taskflow-super-secret-key-for-local-compose-32chars!}
+    ports:
+      - "${STATS_SERVICE_PORT:-8083}:8083"
+    depends_on:
+      task-service:
+        condition: service_started
+    networks:
+      - taskflow-network
+
+  # ----------------------------------------------------
+  # 5. Angular Frontend (Served by Nginx)
+  # ----------------------------------------------------
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    container_name: taskflow-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-4200}:80"
+    depends_on:
+      - auth-service
+      - task-service
+      - stats-service
+    networks:
+      - taskflow-network
+
+# ----------------------------------------------------
+# Persistent Volumes & Custom Bridge Network
+# ----------------------------------------------------
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  taskflow-network:
+    driver: bridge

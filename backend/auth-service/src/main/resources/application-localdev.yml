@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/auth_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+
+jwt:
+  # Safe development default secret key (HMAC SHA-256 requires 256 bits / 32 bytes minimum)
+  secret: ${JWT_SECRET:e0649d13855ea1316df41f703840139a704a69dcae57676e8117d276ddd78e04}
+
+logging:
+  level:
+    com.taskflow.auth: DEBUG
+    org.flywaydb: INFO
+    org.springframework.security: INFO

@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/task_db
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+
+jwt:
+  # Secret key to decode Bearer tokens issued by auth-service
+  secret: ${JWT_SECRET:e0649d13855ea1316df41f703840139a704a69dcae57676e8117d276ddd78e04}
+
+logging:
+  level:
+    com.taskflow.task: DEBUG
+    org.flywaydb: INFO

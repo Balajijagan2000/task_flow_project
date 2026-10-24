@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: taskflow
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - postgres/postgres-init-configmap.yaml
+  - postgres/postgres-pvc.yaml
+  - postgres/postgres-deployment.yaml
+  - postgres/postgres-service.yaml
+  - auth-service/auth-deployment.yaml
+  - auth-service/auth-service.yaml
+  - task-service/task-deployment.yaml
+  - task-service/task-service.yaml
+  - stats-service/stats-deployment.yaml
+  - stats-service/stats-service.yaml
+  - frontend/frontend-deployment.yaml
+  - frontend/frontend-service.yaml
+  - ingress.yaml

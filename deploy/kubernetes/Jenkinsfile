@@ -1,0 +1,72 @@
+pipeline {
+    agent any
+
+    environment {
+        NAMESPACE = "taskflow"
+    }
+
+    options {
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Validate Toolchain') {
+            steps {
+                echo "=== Checking Kubernetes Client ==="
+                sh 'kubectl version --client || true'
+            }
+        }
+
+        stage('Deploy Namespace & Core Config') {
+            steps {
+                echo "=== Deploying Namespace, ConfigMaps, and Secrets ==="
+                sh """
+                    kubectl apply -f deploy/kubernetes/namespace.yaml
+                    kubectl apply -f deploy/kubernetes/configmap.yaml
+                    kubectl apply -f deploy/kubernetes/secret.yaml
+                """
+            }
+        }
+
+        stage('Deploy Shared Database') {
+            steps {
+                echo "=== Deploying PostgreSQL Database & Init Scripts ==="
+                sh """
+                    kubectl apply -f deploy/kubernetes/postgres/postgres-init-configmap.yaml
+                    kubectl apply -f deploy/kubernetes/postgres/postgres-pvc.yaml
+                    kubectl apply -f deploy/kubernetes/postgres/postgres-deployment.yaml
+                    kubectl apply -f deploy/kubernetes/postgres/postgres-service.yaml
+                """
+            }
+        }
+
+        stage('Deploy Ingress Gateway') {
+            steps {
+                echo "=== Deploying Cluster Ingress Rules ==="
+                sh "kubectl apply -f deploy/kubernetes/ingress.yaml"
+            }
+        }
+
+        stage('Verify PostgreSQL Readiness') {
+            steps {
+                echo "=== Waiting for Database to be ready ==="
+                sh "kubectl rollout status deployment/postgres -n ${NAMESPACE} --timeout=120s"
+                sh "kubectl get pods,svc -n ${NAMESPACE}"
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "SUCCESS: Shared infrastructure (Namespace, Config, Postgres, Ingress) is ready."
+        }
+        failure {
+            echo "FAILURE: Base infrastructure deployment failed. Check Kubernetes events and logs."
+        }
+        always {
+            cleanWs deleteDirs: true, notFailBuild: true
+        }
+    }
+}
