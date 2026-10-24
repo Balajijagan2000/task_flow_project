@@ -73,10 +73,5 @@ pipeline {
         failure {
             echo "FAILURE: ${SERVICE_NAME} pipeline failed. Check test reports and container logs."
         }
-        always {
-            node {
-                cleanWs deleteDirs: true, notFailBuild: true
-            }
-        }
     }
 }
