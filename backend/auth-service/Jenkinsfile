@@ -6,7 +6,6 @@ pipeline {
         IMAGE_NAME = "taskflow-auth-service"
         IMAGE_TAG = "v${env.BUILD_NUMBER}"
         NAMESPACE = "taskflow-app"
-        JAVA_HOME = tool name: 'Java-21', type: 'jdk'
     }
 
     options {
@@ -75,7 +74,9 @@ pipeline {
             echo "FAILURE: ${SERVICE_NAME} pipeline failed. Check test reports and container logs."
         }
         always {
-            cleanWs deleteDirs: true, notFailBuild: true
+            node {
+                cleanWs deleteDirs: true, notFailBuild: true
+            }
         }
     }
 }
