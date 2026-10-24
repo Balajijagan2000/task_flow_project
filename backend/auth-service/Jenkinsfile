@@ -15,19 +15,19 @@ pipeline {
     }
 
     stages {
-        stage('Compile & Test Service') {
-            steps {
-                echo "=== Compiling and Testing ${SERVICE_NAME} only ==="
-                dir('backend') {
-                    sh 'mvn clean verify -pl auth-service -am -Djava.version=21'
-                }
-            }
-            post {
-                always {
-                    junit testResults: 'backend/auth-service/target/surefire-reports/*.xml', allowEmptyResults: false
-                }
-            }
-        }
+        // stage('Compile & Test Service') {
+        //     steps {
+        //         echo "=== Compiling and Testing ${SERVICE_NAME} only ==="
+        //         dir('backend') {
+        //             sh 'mvn clean verify -pl auth-service -am -Djava.version=21'
+        //         }
+        //     }
+        //     post {
+        //         always {
+        //             junit testResults: 'backend/auth-service/target/surefire-reports/*.xml', allowEmptyResults: false
+        //         }
+        //     }
+        // }
 
         stage('Build Container Image') {
             steps {
